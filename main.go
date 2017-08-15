@@ -46,26 +46,34 @@ func main() {
 	updates, err := bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
 
-		if update.Message.IsCommand() {
-			command := update.Message.Command()
+		switch {
+		case update.Message != nil:
+			if update.Message.IsCommand() {
+				command := update.Message.Command()
 
-			switch command {
-			case "menu":
-				menu(update.Message)
-			case "start":
-				start(update.Message)
-			case "video":
-				video(update.Message)
-			case "score":
-				score(update.Message)
-			default:
-				fmt.Println("Not found command")
+				switch command {
+				case "menu":
+					menu(update.Message)
+				case "start":
+					start(update.Message)
+				case "video":
+					video(update.Message)
+				case "score":
+					score(update.Message)
+				case "sell":
+					sell(update.Message)
+				default:
+					fmt.Println("Not found command")
+				}
 			}
-
+		case update.CallbackQuery != nil:
+			if update.CallbackQuery.Data == "yes" {
+				sellAll(update.CallbackQuery)
+				fmt.Println("KEKKEKKEKEKEKKEKEK")
+			}
+		default:
+			continue
 		}
 
 	}

@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS users (
 	mayner3 INTEGER,
 	mayner4 INTEGER,
 	score LONG, 
+	money INTEGER,
 	time INTEGER
 );

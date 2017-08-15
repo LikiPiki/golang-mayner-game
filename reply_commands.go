@@ -15,12 +15,40 @@ const (
 )
 
 var (
-	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, time) VALUES (?, 1, 0, 0, 0, 0, ?);"
+	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time) VALUES (?, 1, 0, 0, 0, 0, 300, ?);"
 	find_user                  = "SELECT id FROM users WHERE name=?"
 	find_score_by_username     = "SELECT score, time FROM users WHERE name=?"
 	update_user_score_and_time = "UPDATE users SET score=?, time=? WHERE name=?"
 	get_all_video              = "SELECT mayner1, mayner2, mayner3, mayner4 FROM users WHERE name=?"
+	get_new_money              = "SELECT money, score FROM users WHERE name=?"
 )
+
+func renderMoney(username string) (money int64) {
+	row := db.QueryRow(
+		find_score_by_username,
+		username,
+	)
+
+	var clock int64
+
+	err := row.Scan(&money, &clock)
+	if err != nil {
+		err.Error()
+	}
+
+	timeBefore := clock
+	timeNow := time.Now().Unix()
+
+	money += (timeNow - timeBefore) * MONEY_VALUE / HOUR
+
+	_, err = db.Exec(
+		update_user_score_and_time,
+		money,
+		time.Now().Unix(),
+		username,
+	)
+	return
+}
 
 func menu(msg *tgbotapi.Message) {
 	keyboard := tgbotapi.NewReplyKeyboard(
@@ -105,34 +133,46 @@ func start(msg *tgbotapi.Message) {
 	}
 }
 
-func score(msg *tgbotapi.Message) {
-	row := db.QueryRow(
-		find_score_by_username,
-		msg.From.UserName,
-	)
-
-	var money, clock int64
-
-	err := row.Scan(&money, &clock)
+func sell(msg *tgbotapi.Message) {
+	row := db.QueryRow(get_new_money, msg.From.UserName)
+	var money, score int64
+	_ = renderMoney(msg.From.UserName)
+	err := row.Scan(&money, &score)
 	if err != nil {
 		err.Error()
 	}
 
-	timeBefore := clock
-	timeNow := time.Now().Unix()
+	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Сейчас у тебя %dР\nОбменять можно 500b -> 1Р\n От 500b %d", money, score))
 
-	money += (timeNow - timeBefore) * MONEY_VALUE / HOUR
-
-	_, err = db.Exec(
-		update_user_score_and_time,
-		money,
-		time.Now().Unix(),
-		msg.Chat.UserName,
+	reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("kek", "yes"),
+		),
 	)
+	_, err = bot.Send(reply)
+	if err != nil {
+		err.Error()
+	}
 
+}
+
+func sellAll(call *tgbotapi.CallbackQuery) {
+	var message string
+	message = "Успешно продано!"
+
+	reply := tgbotapi.NewMessage(int64(call.From.ID), message)
+
+	_, err := bot.Send(reply)
+	if err != nil {
+		err.Error()
+	}
+}
+
+func score(msg *tgbotapi.Message) {
+	money := renderMoney(msg.Chat.UserName)
 	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Твой баланс %d Bitcoins!", money))
 
-	_, err = bot.Send(reply)
+	_, err := bot.Send(reply)
 	if err != nil {
 		err.Error()
 	}
