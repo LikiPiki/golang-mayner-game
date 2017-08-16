@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	HOUR        = 60
+	HOUR        = 2
 	MONEY_VALUE = 10
 )
 
@@ -23,7 +23,7 @@ var (
 	get_new_money              = "SELECT money, score FROM users WHERE name=?"
 )
 
-func renderMoney(username string) (money int64) {
+func renderScore(username string) (money int64) {
 	row := db.QueryRow(
 		find_score_by_username,
 		username,
@@ -36,10 +36,28 @@ func renderMoney(username string) (money int64) {
 		err.Error()
 	}
 
+	var videocarts [4]int
+	col := db.QueryRow(
+		get_all_video,
+		username,
+	)
+
+	err = col.Scan(
+		&videocarts[0],
+		&videocarts[1],
+		&videocarts[2],
+		&videocarts[3],
+	)
+	if err != nil {
+		err.Error()
+	}
+
 	timeBefore := clock
 	timeNow := time.Now().Unix()
 
-	money += (timeNow - timeBefore) * MONEY_VALUE / HOUR
+	for i, el := range videos {
+		money += (timeNow - timeBefore) * int64(videocarts[i]*el.Power/HOUR)
+	}
 
 	_, err = db.Exec(
 		update_user_score_and_time,
@@ -124,7 +142,7 @@ func start(msg *tgbotapi.Message) {
 		if err != nil {
 			err.Error()
 		}
-		reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты регнулся!")
+		reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты регнулся! /help")
 	}
 
 	_, err = bot.Send(reply)
@@ -136,17 +154,17 @@ func start(msg *tgbotapi.Message) {
 func sell(msg *tgbotapi.Message) {
 	row := db.QueryRow(get_new_money, msg.From.UserName)
 	var money, score int64
-	_ = renderMoney(msg.From.UserName)
+	_ = renderScore(msg.From.UserName)
 	err := row.Scan(&money, &score)
 	if err != nil {
 		err.Error()
 	}
 
-	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Сейчас у тебя %dР\nОбменять можно 500b -> 1Р\n От 500b %d", money, score))
+	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Сейчас у тебя %dР\nОбменять можно 500b -> 1Р, от 500b\nБаланс: %db", money, score))
 
 	reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("kek", "yes"),
+			tgbotapi.NewInlineKeyboardButtonData("Продать!", "yes"),
 		),
 	)
 	_, err = bot.Send(reply)
@@ -156,11 +174,9 @@ func sell(msg *tgbotapi.Message) {
 
 }
 
-func sellAll(call *tgbotapi.CallbackQuery) {
-	var message string
-	message = "Успешно продано!"
-
-	reply := tgbotapi.NewMessage(int64(call.From.ID), message)
+func score(msg *tgbotapi.Message) {
+	money := renderScore(msg.Chat.UserName)
+	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Твой баланс %d Bitcoins!", money))
 
 	_, err := bot.Send(reply)
 	if err != nil {
@@ -168,10 +184,33 @@ func sellAll(call *tgbotapi.CallbackQuery) {
 	}
 }
 
-func score(msg *tgbotapi.Message) {
-	money := renderMoney(msg.Chat.UserName)
-	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Твой баланс %d Bitcoins!", money))
+func donate(msg *tgbotapi.Message) {
+	reply := tgbotapi.NewMessage(msg.Chat.ID, "Нужно больше Р, чтобы купить видеокарт?\nПиши @likipiki.\nИ за небольшое пожертвование получи бонусы!\nТак же туда можно присылать отзывы и предложения!")
+	_, err := bot.Send(reply)
+	if err != nil {
+		err.Error()
+	}
+}
 
+func shop(msg *tgbotapi.Message) {
+	var reply tgbotapi.MessageConfig
+	for i, el := range videos {
+		reply = tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("%s\n%s", el.Name, el.Desk))
+
+		reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData(fmt.Sprintf("Купить %dР", el.Cost), fmt.Sprintf("video %d", i)),
+			),
+		)
+		_, err := bot.Send(reply)
+		if err != nil {
+			err.Error()
+		}
+	}
+}
+
+func help(msg *tgbotapi.Message) {
+	reply := tgbotapi.NewMessage(msg.Chat.ID, helpDesc)
 	_, err := bot.Send(reply)
 	if err != nil {
 		err.Error()

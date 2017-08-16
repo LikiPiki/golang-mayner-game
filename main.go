@@ -4,19 +4,22 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
 const (
-	DB_NAME = "sqlite3"
-	DB_PATH = "./data.db"
+	DB_NAME  = "sqlite3"
+	DB_PATH  = "./data.db"
+	helpDesc = "Покупай видеокарты, майни Биткоин получай бабки!\nНачать играть /menu\nСоздатель @likipiki\nПри поддержке чатика UwebDesign!\nС начала игры у тя есть немного бабла. Пойди в /shop и купи свою первую видяку!"
 )
 
 var (
-	db  *sql.DB
-	bot *tgbotapi.BotAPI
+	db     *sql.DB
+	bot    *tgbotapi.BotAPI
+	videos = make([]VideoCard, 0)
 )
 
 func init() {
@@ -25,6 +28,19 @@ func init() {
 	if err != nil {
 		err.Error()
 	}
+
+	videos = append(videos, VideoCard{"gtx 460", "Слабая видеокарта", 100, 1})
+	videos = append(videos, VideoCard{"gtx 640", "Средняя видеокарта", 300, 4})
+	videos = append(videos, VideoCard{"gtx 1080", "Мощная видеокарта", 1000, 7})
+	videos = append(videos, VideoCard{"gtx 1080ti", "Топовая видеокарта", 3000, 30})
+
+}
+
+type VideoCard struct {
+	Name  string
+	Desk  string
+	Cost  int
+	Power int
 }
 
 func main() {
@@ -54,23 +70,34 @@ func main() {
 
 				switch command {
 				case "menu":
-					menu(update.Message)
+					go menu(update.Message)
 				case "start":
-					start(update.Message)
+					go start(update.Message)
 				case "video":
-					video(update.Message)
+					go video(update.Message)
 				case "score":
-					score(update.Message)
+					go score(update.Message)
 				case "sell":
-					sell(update.Message)
+					go sell(update.Message)
+				case "shop":
+					go shop(update.Message)
+				case "help":
+					go help(update.Message)
+				case "donate":
+					go donate(update.Message)
 				default:
 					fmt.Println("Not found command")
 				}
 			}
 		case update.CallbackQuery != nil:
 			if update.CallbackQuery.Data == "yes" {
-				sellAll(update.CallbackQuery)
-				fmt.Println("KEKKEKKEKEKEKKEKEK")
+				go sellAll(update.CallbackQuery)
+			} else if strings.Split(update.CallbackQuery.Data, " ")[0] == "video" {
+				go buy(
+					update.CallbackQuery,
+					strings.Split(update.CallbackQuery.Data, " ")[1],
+				)
+				fmt.Println("BUYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
 			}
 		default:
 			continue
