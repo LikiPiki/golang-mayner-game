@@ -8,4 +8,5 @@ CREATE TABLE IF NOT EXISTS users (
 	score LONG, 
 	money INTEGER,
 	time INTEGER
+	user_id INTEGER
 );

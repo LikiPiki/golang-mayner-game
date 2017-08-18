@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	ADMIN    = "likipiki"
 	DB_NAME  = "sqlite3"
 	DB_PATH  = "./data.db"
 	helpDesc = "Покупай видеокарты, майни Биткоин получай бабки!\nНачать играть /menu\nСоздатель @likipiki\nПри поддержке чатика UwebDesign!\nС начала игры у тя есть немного бабла. Пойди в /shop и купи свою первую видяку!"
@@ -26,14 +27,13 @@ func init() {
 	var err error
 	db, err = sql.Open(DB_NAME, DB_PATH)
 	if err != nil {
-		err.Error()
+		panic(err)
 	}
 
 	videos = append(videos, VideoCard{"gtx 460", "Слабая видеокарта", 100, 1})
 	videos = append(videos, VideoCard{"gtx 640", "Средняя видеокарта", 300, 4})
 	videos = append(videos, VideoCard{"gtx 1080", "Мощная видеокарта", 1000, 7})
 	videos = append(videos, VideoCard{"gtx 1080ti", "Топовая видеокарта", 3000, 30})
-
 }
 
 type VideoCard struct {
@@ -49,7 +49,7 @@ func main() {
 	bot, err = tgbotapi.NewBotAPI(TOKEN)
 
 	if err != nil {
-		err.Error()
+		panic(err)
 	}
 
 	bot.Debug = true
@@ -67,7 +67,6 @@ func main() {
 		case update.Message != nil:
 			if update.Message.IsCommand() {
 				command := update.Message.Command()
-
 				switch command {
 				case "menu":
 					go menu(update.Message)
@@ -86,7 +85,19 @@ func main() {
 				case "donate":
 					go donate(update.Message)
 				default:
-					fmt.Println("Not found command")
+					fmt.Println("test")
+				}
+			} else {
+				words := strings.Split(update.Message.Text, " ")
+
+				if len(words) == 3 {
+					if words[0] == "send" && update.Message.Chat.UserName == ADMIN {
+						go addMoney(
+							strings.Split(update.Message.Text, " ")[1],
+							strings.Split(update.Message.Text, " ")[2],
+							update.Message,
+						)
+					}
 				}
 			}
 		case update.CallbackQuery != nil:
@@ -97,7 +108,6 @@ func main() {
 					update.CallbackQuery,
 					strings.Split(update.CallbackQuery.Data, " ")[1],
 				)
-				fmt.Println("BUYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
 			}
 		default:
 			continue

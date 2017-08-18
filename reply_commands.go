@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -15,7 +16,7 @@ const (
 )
 
 var (
-	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time) VALUES (?, 1, 0, 0, 0, 0, 300, ?);"
+	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time, user_id) VALUES (?, 1, 0, 0, 0, 0, 300, ?, ?);"
 	find_user                  = "SELECT id FROM users WHERE name=?"
 	find_score_by_username     = "SELECT score, time FROM users WHERE name=?"
 	update_user_score_and_time = "UPDATE users SET score=?, time=? WHERE name=?"
@@ -33,7 +34,7 @@ func renderScore(username string) (money int64) {
 
 	err := row.Scan(&money, &clock)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 
 	var videocarts [4]int
@@ -49,7 +50,7 @@ func renderScore(username string) (money int64) {
 		&videocarts[3],
 	)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 
 	timeBefore := clock
@@ -85,7 +86,7 @@ func menu(msg *tgbotapi.Message) {
 	reply.ReplyMarkup = keyboard
 	_, err := bot.Send(reply)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 
 }
@@ -106,7 +107,7 @@ func video(msg *tgbotapi.Message) {
 	)
 
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 
 	fmt.Println(videos)
@@ -115,7 +116,7 @@ func video(msg *tgbotapi.Message) {
 		reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Количество видеокарт %d - %d", i+1, el))
 		_, err := bot.Send(reply)
 		if err != nil {
-			err.Error()
+			log.Println(err)
 		}
 	}
 
@@ -124,30 +125,45 @@ func video(msg *tgbotapi.Message) {
 func start(msg *tgbotapi.Message) {
 	var reply tgbotapi.MessageConfig
 
-	var res sql.NullString
-	row := db.QueryRow(find_user, msg.From.UserName)
+	if len(msg.From.UserName) > 4 {
+		var res sql.NullString
+		row := db.QueryRow(find_user, msg.From.UserName)
 
-	err := row.Scan(&res)
-	if err != nil {
-		err.Error()
-	}
-	if res.Valid {
-		reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты уже зарегистрирован")
-	} else {
-		_, err := db.Exec(
-			insert_new_user,
-			msg.From.UserName,
-			time.Now().Unix(),
-		)
+		err := row.Scan(&res)
 		if err != nil {
-			err.Error()
+			log.Println(err)
 		}
-		reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты регнулся! /help")
+		if res.Valid {
+			// this is temporary code here for ALPHA ONLY
+			_, err := db.Exec("UPDATE users SET user_id=? WHERE name=?",
+				msg.From.ID,
+				msg.From.UserName,
+			)
+			if err != nil {
+				log.Println(err)
+			}
+			// this is temporary code here
+			reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты уже зарегистрирован")
+		} else {
+			_, err := db.Exec(
+				insert_new_user,
+				msg.From.UserName,
+				time.Now().Unix(),
+				msg.From.ID,
+			)
+			if err != nil {
+				log.Println(err)
+			}
+			reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты регнулся! /help")
+		}
+
+	} else {
+		reply = tgbotapi.NewMessage(msg.Chat.ID, "Не удается тебя зарегистрировать\nВ настройках установи  usernam\nИ попробуй /start снова")
 	}
 
-	_, err = bot.Send(reply)
+	_, err := bot.Send(reply)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 }
 
@@ -157,7 +173,7 @@ func sell(msg *tgbotapi.Message) {
 	_ = renderScore(msg.From.UserName)
 	err := row.Scan(&money, &score)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 
 	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Сейчас у тебя %dР\nОбменять можно 500b -> 1Р, от 500b\nБаланс: %db", money, score))
@@ -169,7 +185,7 @@ func sell(msg *tgbotapi.Message) {
 	)
 	_, err = bot.Send(reply)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 
 }
@@ -180,7 +196,7 @@ func score(msg *tgbotapi.Message) {
 
 	_, err := bot.Send(reply)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 }
 
@@ -188,7 +204,7 @@ func donate(msg *tgbotapi.Message) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, "Нужно больше Р, чтобы купить видеокарт?\nПиши @likipiki.\nИ за небольшое пожертвование получи бонусы!\nТак же туда можно присылать отзывы и предложения!")
 	_, err := bot.Send(reply)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 }
 
@@ -204,7 +220,7 @@ func shop(msg *tgbotapi.Message) {
 		)
 		_, err := bot.Send(reply)
 		if err != nil {
-			err.Error()
+			log.Println(err)
 		}
 	}
 }
@@ -213,6 +229,6 @@ func help(msg *tgbotapi.Message) {
 	reply := tgbotapi.NewMessage(msg.Chat.ID, helpDesc)
 	_, err := bot.Send(reply)
 	if err != nil {
-		err.Error()
+		log.Println(err)
 	}
 }
