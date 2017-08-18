@@ -98,6 +98,17 @@ func main() {
 							update.Message,
 						)
 					}
+				} else if len(words) >= 2 {
+					if words[0] == "msg" && update.Message.Chat.UserName == ADMIN {
+						go sendMessageForAll(
+							strings.Replace(
+								update.Message.Text,
+								"msg ",
+								"",
+								-1,
+							),
+						)
+					}
 				}
 			}
 		case update.CallbackQuery != nil:
