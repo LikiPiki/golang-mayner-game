@@ -21,7 +21,7 @@ func addMoney(cost string, name string, msg *tgbotapi.Message) {
 		message = "Ошибка"
 	}
 	var user_money int
-	row := db.QueryRow(get_money, msg.Chat.UserName)
+	row := db.QueryRow(get_money, name)
 	err = row.Scan(&user_money)
 
 	if err != nil {
@@ -29,7 +29,7 @@ func addMoney(cost string, name string, msg *tgbotapi.Message) {
 	}
 
 	user_money += money
-	_, err = db.Exec(update_money, user_money, msg.Chat.UserName)
+	_, err = db.Exec(update_money, user_money, name)
 	if err != nil {
 		message = "Ошибка"
 	}
