@@ -72,8 +72,4 @@ func backupDb(msg *tgbotapi.Message) {
 		fmt.Println("here")
 		log.Println(err)
 	}
-	// err = file.Close()
-	// if err != nil {
-	// 	log.Println(err)
-	// }
 }
