@@ -7,6 +7,4 @@
 Играйте присылайте pull-requests!
 
 ## Разработчек 
-[likipiki](https://github.com/LikiPiki)
-
-[Kolya Raketa](https://github.com/kolyaraketa)🚀
+[likipiki](https://github.com/LikiPiki), [Kolya Raketa](https://github.com/kolyaraketa)🚀
