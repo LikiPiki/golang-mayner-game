@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/telegram-bot-api.v4"
 	"log"
@@ -62,5 +63,17 @@ func sendMessageForAll(message string) {
 			}
 		}
 	}
+}
 
+func backupDb(msg *tgbotapi.Message) {
+	reply := tgbotapi.NewDocumentUpload(int64(msg.From.ID), DB_IN_FOLDER_NAME)
+	_, err := bot.Send(reply)
+	if err != nil {
+		fmt.Println("here")
+		log.Println(err)
+	}
+	// err = file.Close()
+	// if err != nil {
+	// 	log.Println(err)
+	// }
 }

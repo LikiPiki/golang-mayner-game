@@ -11,10 +11,11 @@ import (
 )
 
 const (
-	ADMIN    = "likipiki"
-	DB_NAME  = "sqlite3"
-	DB_PATH  = "./data.db"
-	helpDesc = "Покупай видеокарты, майни Биткоин получай бабки!\nНачать играть /menu\nСоздатель @likipiki\nПри поддержке чатика UwebDesign!\nС начала игры у тя есть немного бабла. Пойди в /shop и купи свою первую видяку!"
+	ADMIN             = "likipiki"
+	DB_NAME           = "sqlite3"
+	DB_PATH           = "./data.db"
+	DB_IN_FOLDER_NAME = "data.db"
+	helpDesc          = "Покупай видеокарты, майни Биткоин получай бабки!\nНачать играть /menu\nСоздатель @likipiki\nПри поддержке чатика UwebDesign!\nС начала игры у тя есть немного бабла. Пойди в /shop и купи свою первую видяку!"
 )
 
 var (
@@ -108,6 +109,10 @@ func main() {
 								-1,
 							),
 						)
+					}
+				} else if len(words) == 1 {
+					if words[0] == "backup" && update.Message.Chat.UserName == ADMIN {
+						go backupDb(update.Message)
 					}
 				}
 			}
