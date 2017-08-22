@@ -16,12 +16,16 @@ const (
 )
 
 var (
-	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time, user_id) VALUES (?, 1, 0, 0, 0, 0, 300, ?, ?);"
+	// users
+	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time, user_id, active) VALUES (?, 1, 0, 0, 0, 0, 300, ?, ?, 0);"
 	find_user                  = "SELECT id FROM users WHERE name=?"
 	find_score_by_username     = "SELECT score, time FROM users WHERE name=?"
 	update_user_score_and_time = "UPDATE users SET score=?, time=? WHERE name=?"
 	get_all_video              = "SELECT mayner1, mayner2, mayner3, mayner4 FROM users WHERE name=?"
 	get_new_money              = "SELECT money, score FROM users WHERE name=?"
+
+	// value
+	get_values = "SELECT id, name, cost FROM value"
 )
 
 func renderScore(username string) (money int64) {
@@ -75,6 +79,10 @@ func menu(msg *tgbotapi.Message) {
 			tgbotapi.NewKeyboardButton("/score"),
 			tgbotapi.NewKeyboardButton("/video"),
 			tgbotapi.NewKeyboardButton("/shop"),
+		),
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("/валюта"),
+			tgbotapi.NewKeyboardButton("/stat"),
 		),
 		tgbotapi.NewKeyboardButtonRow(
 			tgbotapi.NewKeyboardButton("/donate"),
@@ -219,6 +227,37 @@ func shop(msg *tgbotapi.Message) {
 			),
 		)
 		_, err := bot.Send(reply)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func value(msg *tgbotapi.Message) {
+	rows, err := db.Query(get_values)
+	if err != nil {
+		log.Println(err)
+	}
+	var name string
+	var cost int
+	var id int
+	for rows.Next() {
+		err := rows.Scan(&id, &name, &cost)
+		if err != nil {
+			log.Println(err)
+		}
+
+		reply := tgbotapi.NewMessage(
+			msg.Chat.ID,
+			fmt.Sprintf("%s:\nМайнится в минуту: %d", name, cost),
+		)
+		reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Выбрать!", fmt.Sprintf("value %d", id)),
+			),
+		)
+
+		_, err = bot.Send(reply)
 		if err != nil {
 			log.Println(err)
 		}

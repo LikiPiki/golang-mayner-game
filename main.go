@@ -85,6 +85,8 @@ func main() {
 					go help(update.Message)
 				case "donate":
 					go donate(update.Message)
+				case "валюта":
+					go value(update.Message)
 				default:
 					fmt.Println("test")
 				}
@@ -121,6 +123,11 @@ func main() {
 				go sellAll(update.CallbackQuery)
 			} else if strings.Split(update.CallbackQuery.Data, " ")[0] == "video" {
 				go buy(
+					update.CallbackQuery,
+					strings.Split(update.CallbackQuery.Data, " ")[1],
+				)
+			} else if strings.Split(update.CallbackQuery.Data, " ")[0] == "value" {
+				go changeValue(
 					update.CallbackQuery,
 					strings.Split(update.CallbackQuery.Data, " ")[1],
 				)

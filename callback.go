@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strconv"
 
 	"gopkg.in/telegram-bot-api.v4"
@@ -96,6 +97,15 @@ func buy(call *tgbotapi.CallbackQuery, number string) {
 	if err != nil {
 		err.Error()
 	}
+}
+
+func changeValue(call *tgbotapi.CallbackQuery, number string) {
+	id, err := strconv.Atoi(number)
+	if err != nil {
+		log.Println(err)
+	}
+	fmt.Println(fmt.Sprintf("This is id %d", id))
+	// chage value here
 }
 
 func sellAll(call *tgbotapi.CallbackQuery) {

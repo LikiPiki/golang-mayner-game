@@ -9,4 +9,16 @@ CREATE TABLE IF NOT EXISTS users (
 	money INTEGER,
 	time INTEGER
 	user_id INTEGER
+	active INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS value (
+	id INTEGER PRIMARY KEY NOT NULL,
+	name TEXT,
+	cost INTEGER
+);
+
+INSERT INTO value (name, cost) VALUES ("Bitcoin", 1);
+INSERT INTO value (name, cost) VALUES ("Ethereum", 1);
+INSERT INTO value (name, cost) VALUES ("Bitcoin cash", 0);
+
