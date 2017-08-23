@@ -22,6 +22,7 @@ var (
 	update_user_score_and_time = "UPDATE users SET score=?, time=? WHERE name=?"
 	get_all_video              = "SELECT mayner1, mayner2, mayner3, mayner4 FROM users WHERE name=?"
 	get_new_money              = "SELECT money, score FROM users WHERE name=?"
+	get_user_money             = "SELECT money FROM users WHERE name=?"
 
 	// value
 	get_values       = "SELECT id, name, cost FROM value"
@@ -33,6 +34,18 @@ func getCost(id int) (cost int) {
 	err := row.Scan(&cost)
 	if err != nil {
 		log.Println(err)
+	}
+	return
+}
+
+func getUserMoney(username string) (money int) {
+	row := db.QueryRow(
+		get_user_money,
+		username,
+	)
+	err := row.Scan(&money)
+	if err != nil {
+		log.Fatal(err)
 	}
 	return
 }
@@ -229,6 +242,12 @@ func donate(msg *tgbotapi.Message) {
 
 func shop(msg *tgbotapi.Message) {
 	var reply tgbotapi.MessageConfig
+	currentMoney := getUserMoney(msg.From.UserName)
+	reply = tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Баланс: %d Р", currentMoney))
+	_, err := bot.Send(reply)
+	if err != nil {
+		log.Println(err)
+	}
 	for i, el := range videos {
 		reply = tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("%s\n%s", el.Name, el.Desk))
 

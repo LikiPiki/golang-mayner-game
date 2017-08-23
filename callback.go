@@ -23,8 +23,10 @@ var (
 	update_mayner3         = "UPDATE users SET mayner3=? WHERE name=?"
 	update_mayner4         = "UPDATE users SET mayner4=? WHERE name=?"
 	update_money           = "UPDATE users SET money=? WHERE name=?"
+	update_active          = "UPDATE users SET active=? WHERE name=? "
 
-	// for value table
+	//for value table
+	get_name_by_id = "SELECT name FROM value WHERE id=?"
 )
 
 func buy(call *tgbotapi.CallbackQuery, number string) {
@@ -107,12 +109,26 @@ func changeValue(call *tgbotapi.CallbackQuery, number string) {
 	if err != nil {
 		log.Println(err)
 	}
-	fmt.Println(fmt.Sprintf("This is id %d", id))
 	_, err = db.Exec(
-		"UPDATE users SET active=? WHERE name=? ",
+		update_active,
 		id,
 		call.From.UserName,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	row := db.QueryRow(get_name_by_id, id)
+	var value string
+	err = row.Scan(&value)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	reply := tgbotapi.NewMessage(
+		int64(call.From.ID),
+		fmt.Sprintf("Майним %s", value),
+	)
+	_, err = bot.Send(reply)
 	if err != nil {
 		log.Fatal(err)
 	}
