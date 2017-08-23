@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	// for users table
 	check_score            = "SELECT score, money FROM users WHERE name=?"
 	update_money_and_score = "UPDATE users SET score=?, money=? WHERE name=?"
 	select_money           = "SELECT money FROM users WHERE name=?"
@@ -22,6 +23,8 @@ var (
 	update_mayner3         = "UPDATE users SET mayner3=? WHERE name=?"
 	update_mayner4         = "UPDATE users SET mayner4=? WHERE name=?"
 	update_money           = "UPDATE users SET money=? WHERE name=?"
+
+	// for value table
 )
 
 func buy(call *tgbotapi.CallbackQuery, number string) {
@@ -105,7 +108,14 @@ func changeValue(call *tgbotapi.CallbackQuery, number string) {
 		log.Println(err)
 	}
 	fmt.Println(fmt.Sprintf("This is id %d", id))
-	// chage value here
+	_, err = db.Exec(
+		"UPDATE users SET active=? WHERE name=? ",
+		id,
+		call.From.UserName,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func sellAll(call *tgbotapi.CallbackQuery) {

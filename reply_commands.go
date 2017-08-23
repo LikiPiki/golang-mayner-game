@@ -11,22 +11,31 @@ import (
 )
 
 const (
-	HOUR        = 2
-	MONEY_VALUE = 10
+	HOUR = 4
 )
 
 var (
 	// users
-	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time, user_id, active) VALUES (?, 1, 0, 0, 0, 0, 300, ?, ?, 0);"
+	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time, user_id, active) VALUES (?, 1, 0, 0, 0, 0, 300, ?, ?, 1);"
 	find_user                  = "SELECT id FROM users WHERE name=?"
-	find_score_by_username     = "SELECT score, time FROM users WHERE name=?"
+	find_score_by_username     = "SELECT score, time, active FROM users WHERE name=?"
 	update_user_score_and_time = "UPDATE users SET score=?, time=? WHERE name=?"
 	get_all_video              = "SELECT mayner1, mayner2, mayner3, mayner4 FROM users WHERE name=?"
 	get_new_money              = "SELECT money, score FROM users WHERE name=?"
 
 	// value
-	get_values = "SELECT id, name, cost FROM value"
+	get_values       = "SELECT id, name, cost FROM value"
+	get_cost_from_id = "SELECT cost FROM value WHERE id=?"
 )
+
+func getCost(id int) (cost int) {
+	row := db.QueryRow(get_cost_from_id, id)
+	err := row.Scan(&cost)
+	if err != nil {
+		log.Println(err)
+	}
+	return
+}
 
 func renderScore(username string) (money int64) {
 	row := db.QueryRow(
@@ -35,11 +44,13 @@ func renderScore(username string) (money int64) {
 	)
 
 	var clock int64
+	var active int
 
-	err := row.Scan(&money, &clock)
+	err := row.Scan(&money, &clock, &active)
 	if err != nil {
 		log.Println(err)
 	}
+	moneyValue := getCost(active)
 
 	var videocarts [4]int
 	col := db.QueryRow(
@@ -61,7 +72,7 @@ func renderScore(username string) (money int64) {
 	timeNow := time.Now().Unix()
 
 	for i, el := range videos {
-		money += (timeNow - timeBefore) * int64(videocarts[i]*el.Power/HOUR)
+		money += (timeNow - timeBefore) * int64(videocarts[i]*el.Power/HOUR*moneyValue)
 	}
 
 	_, err = db.Exec(
