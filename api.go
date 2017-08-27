@@ -34,10 +34,11 @@ func getUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	var users []User
 	db.Limit(count).Find(&users)
-	jsonify, err := json.Marshal(&JsonUsers{
+	//TODO: for raketa only
+	jsonify, err := json.MarshalIndent(&JsonUsers{
 		len(users),
 		users,
-	})
+	}, "", "  ")
 	if err != nil {
 		log.Println(err)
 	}
@@ -54,10 +55,11 @@ func getTop(w http.ResponseWriter, r *http.Request) {
 	}
 	var users []User
 	db.Limit(count).Order("score desc").Find(&users)
-	jsonify, err := json.Marshal(&JsonUsers{
+	//TODO: for raketa only
+	jsonify, err := json.MarshalIndent(&JsonUsers{
 		len(users),
 		users,
-	})
+	}, "", "  ")
 	if err != nil {
 		log.Println(err)
 	}
@@ -68,7 +70,8 @@ func getTop(w http.ResponseWriter, r *http.Request) {
 func getCrypto(w http.ResponseWriter, r *http.Request) {
 	var vals []CryptoValue
 	db.Find(&vals)
-	jsonify, err := json.Marshal(&JsonCrypto{vals})
+	//TODO: for raketa only
+	jsonify, err := json.MarshalIndent(&JsonCrypto{vals}, "", "  ")
 	if err != nil {
 		log.Println(err)
 	}
