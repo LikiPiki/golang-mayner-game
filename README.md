@@ -6,6 +6,12 @@
 
 Играйте присылайте pull-requests!
 
+## Dependency
+```
+go get github.com/jinzhu/gorm
+go get gopkg.in/telegram-bot-api.v4
+```
+
 ## Docker
 Лучше всего использовать в докер контейнере с компиляцией в один бинарник
 ```Dockerfile

@@ -1,12 +1,10 @@
 package main
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/jinzhu/gorm"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
@@ -19,22 +17,30 @@ const (
 )
 
 var (
-	db     *sql.DB
-	bot    *tgbotapi.BotAPI
+	bot *tgbotapi.BotAPI
+	db  *gorm.DB
+
 	videos = make([]VideoCard, 0)
 )
 
 func init() {
 	var err error
-	db, err = sql.Open(DB_NAME, DB_PATH)
+	db, err = gorm.Open(DB_NAME, DB_PATH)
 	if err != nil {
 		panic(err)
 	}
+	db.LogMode(true)
+
+	db.AutoMigrate(
+		&User{},
+		&CryptoValue{},
+	)
 
 	videos = append(videos, VideoCard{"gtx 460", "Слабая видеокарта", 100, 1})
 	videos = append(videos, VideoCard{"gtx 640", "Средняя видеокарта", 300, 4})
 	videos = append(videos, VideoCard{"gtx 1080", "Мощная видеокарта", 1000, 7})
 	videos = append(videos, VideoCard{"gtx 1080ti", "Топовая видеокарта", 3000, 30})
+
 }
 
 type VideoCard struct {
@@ -87,8 +93,6 @@ func main() {
 					go donate(update.Message)
 				case "валюта":
 					go value(update.Message)
-				default:
-					fmt.Println("test")
 				}
 			} else {
 				words := strings.Split(update.Message.Text, " ")
