@@ -1,32 +1,11 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"strconv"
 
 	"gopkg.in/telegram-bot-api.v4"
-)
-
-var (
-	// for users table
-	check_score            = "SELECT score, money FROM users WHERE name=?"
-	update_money_and_score = "UPDATE users SET score=?, money=? WHERE name=?"
-	select_money           = "SELECT money FROM users WHERE name=?"
-	select_mayner1         = "SELECT mayner1 FROM users WHERE name=?"
-	select_mayner2         = "SELECT mayner2 FROM users WHERE name=?"
-	select_mayner3         = "SELECT mayner3 FROM users WHERE name=?"
-	select_mayner4         = "SELECT mayner4 FROM users WHERE name=?"
-	update_mayner1         = "UPDATE users SET mayner1=? WHERE name=?"
-	update_mayner2         = "UPDATE users SET mayner2=? WHERE name=?"
-	update_mayner3         = "UPDATE users SET mayner3=? WHERE name=?"
-	update_mayner4         = "UPDATE users SET mayner4=? WHERE name=?"
-	update_money           = "UPDATE users SET money=? WHERE name=?"
-	update_active          = "UPDATE users SET active=? WHERE name=? "
-
-	//for value table
-	get_name_by_id = "SELECT name FROM value WHERE id=?"
 )
 
 func buy(call *tgbotapi.CallbackQuery, number string) {
@@ -35,65 +14,27 @@ func buy(call *tgbotapi.CallbackQuery, number string) {
 		err.Error()
 	}
 	username := call.From.UserName
-	var money int
-
-	row := db.QueryRow(select_money, username)
-	err = row.Scan(&money)
-	if err != nil {
-		err.Error()
-	}
+	var us User
+	db.First(&us, "name = ?", username)
+	fmt.Println(us.Money)
 
 	var reply tgbotapi.MessageConfig
-	var mayner int
 
-	if money >= videos[num].Cost {
-		money -= videos[num].Cost
-		var col *sql.Row
-
+	if us.Money >= videos[num].Cost {
+		us.Money -= videos[num].Cost
+		fmt.Println(us.Money)
 		if num == 0 {
-			col = db.QueryRow(select_mayner1, username)
+			us.Mayner1++
 		} else if num == 1 {
-			col = db.QueryRow(select_mayner2, username)
+			us.Mayner2++
 		} else if num == 2 {
-			col = db.QueryRow(select_mayner3, username)
+			us.Mayner3++
 		} else if num == 3 {
-			col = db.QueryRow(select_mayner4, username)
+			us.Mayner4++
 		}
+		db.Save(&us)
 
-		err := col.Scan(&mayner)
-		if err != nil {
-			err.Error()
-		}
-		mayner++
-
-		if num == 0 {
-			_, err := db.Exec(update_mayner1, mayner, username)
-			if err != nil {
-				err.Error()
-			}
-		} else if num == 1 {
-			_, err := db.Exec(update_mayner2, mayner, username)
-			if err != nil {
-				err.Error()
-			}
-		} else if num == 2 {
-			_, err := db.Exec(update_mayner3, mayner, username)
-			if err != nil {
-				err.Error()
-			}
-		} else if num == 3 {
-			_, err := db.Exec(update_mayner4, mayner, username)
-			if err != nil {
-				err.Error()
-			}
-		}
-
-		_, err = db.Exec(update_money, money, username)
-		if err != nil {
-			err.Error()
-		}
-
-		reply = tgbotapi.NewMessage(int64(call.From.ID), fmt.Sprintf("Куплено %d", mayner))
+		reply = tgbotapi.NewMessage(int64(call.From.ID), fmt.Sprintf("Куплено /video"))
 	} else {
 		reply = tgbotapi.NewMessage(int64(call.From.ID), "Недостаточно денег")
 	}
@@ -109,24 +50,16 @@ func changeValue(call *tgbotapi.CallbackQuery, number string) {
 	if err != nil {
 		log.Println(err)
 	}
-	_, err = db.Exec(
-		update_active,
-		id,
-		call.From.UserName,
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
-	row := db.QueryRow(get_name_by_id, id)
-	var value string
-	err = row.Scan(&value)
-	if err != nil {
-		log.Fatal(err)
-	}
-
+	var val CryptoValue
+	db.First(&val, id)
+	fmt.Println(val)
+	var us User
+	db.First(&us, "name = ?", call.From.UserName)
+	us.CryptoValue = val
+	db.Save(&us)
 	reply := tgbotapi.NewMessage(
 		int64(call.From.ID),
-		fmt.Sprintf("Майним %s", value),
+		fmt.Sprintf("Майним %s", val.Name),
 	)
 	_, err = bot.Send(reply)
 	if err != nil {
@@ -139,35 +72,24 @@ func sellAll(call *tgbotapi.CallbackQuery) {
 	message = "Успешно продано!\nBTC - %d\nР - %d"
 	username := call.From.UserName
 
-	row := db.QueryRow(check_score, username)
+	var us User
+	db.First(&us, "name = ?", username)
 
 	var reply tgbotapi.MessageConfig
-	var score, money int64
 
-	err := row.Scan(&score, &money)
-	if err != nil {
-		err.Error()
-	}
-
-	if score >= 500 {
-		money += score / 500
-		score -= (score / 500) * 500
-		_, err = db.Exec(
-			update_money_and_score,
-			score,
-			money,
-			username,
-		)
-
-		if err != nil {
-			err.Error()
-		}
-		reply = tgbotapi.NewMessage(int64(call.From.ID), fmt.Sprintf(message, score, money))
+	if us.Score >= 500 {
+		us.Money += int(us.Score / 500)
+		us.Score -= (us.Score / 500) * 500
+		db.Model(&us).Update(User{
+			Score: us.Score,
+			Money: us.Money,
+		})
+		reply = tgbotapi.NewMessage(int64(call.From.ID), fmt.Sprintf(message, us.Score, us.Money))
 	} else {
 		reply = tgbotapi.NewMessage(int64(call.From.ID), "Слишком мало b чтобы продать!!!")
 	}
 
-	_, err = bot.Send(reply)
+	_, err := bot.Send(reply)
 	if err != nil {
 		err.Error()
 	}

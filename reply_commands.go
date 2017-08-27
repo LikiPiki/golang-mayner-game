@@ -1,12 +1,10 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/telegram-bot-api.v4"
 )
 
@@ -14,87 +12,50 @@ const (
 	HOUR = 4
 )
 
-var (
-	// users
-	insert_new_user            = "INSERT INTO users (name, mayner1, mayner2, mayner3, mayner4, score, money, time, user_id, active) VALUES (?, 1, 0, 0, 0, 0, 300, ?, ?, 1);"
-	find_user                  = "SELECT id FROM users WHERE name=?"
-	find_score_by_username     = "SELECT score, time, active FROM users WHERE name=?"
-	update_user_score_and_time = "UPDATE users SET score=?, time=? WHERE name=?"
-	get_all_video              = "SELECT mayner1, mayner2, mayner3, mayner4 FROM users WHERE name=?"
-	get_new_money              = "SELECT money, score FROM users WHERE name=?"
-	get_user_money             = "SELECT money FROM users WHERE name=?"
-
-	// value
-	get_values       = "SELECT id, name, cost FROM value"
-	get_cost_from_id = "SELECT cost FROM value WHERE id=?"
-)
-
-func getCost(id int) (cost int) {
-	row := db.QueryRow(get_cost_from_id, id)
-	err := row.Scan(&cost)
-	if err != nil {
-		log.Println(err)
-	}
-	return
-}
-
 func getUserMoney(username string) (money int) {
-	row := db.QueryRow(
-		get_user_money,
-		username,
-	)
-	err := row.Scan(&money)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
+	var us User
+	db.First(&us, "name = ?", username)
+	fmt.Println("Money is", us)
+	return us.Money
 }
 
-func renderScore(username string) (money int64) {
-	row := db.QueryRow(
-		find_score_by_username,
-		username,
-	)
-
-	var clock int64
-	var active int
-
-	err := row.Scan(&money, &clock, &active)
-	if err != nil {
-		log.Println(err)
-	}
-	moneyValue := getCost(active)
-
+func renderScore(username string) int64 {
+	var us User
 	var videocarts [4]int
-	col := db.QueryRow(
-		get_all_video,
-		username,
-	)
 
-	err = col.Scan(
-		&videocarts[0],
-		&videocarts[1],
-		&videocarts[2],
-		&videocarts[3],
-	)
-	if err != nil {
-		log.Println(err)
-	}
+	db.First(&us, "name = ?", username)
+	fmt.Println("--------- printed --------")
+	fmt.Println("-   ", us, "-")
+	fmt.Println("--------- printed  --------")
+	var val CryptoValue
+	db.Model(&us).Related(&val)
+	// testing val
+	fmt.Println("--------- DEBUG  val -----")
+	fmt.Println("-   ", val, "-")
+	fmt.Println("--------- DEBUG  --------")
+	// testing val END
 
-	timeBefore := clock
-	timeNow := time.Now().Unix()
+	videocarts[0] = us.Mayner1
+	videocarts[1] = us.Mayner2
+	videocarts[2] = us.Mayner3
+	videocarts[3] = us.Mayner4
+
+	timeNow := int(time.Now().Unix())
+
+	// testing acti
+
+	fmt.Println("--------- DEBUG --------")
+	fmt.Println("-   ", val, "-")
+	fmt.Println("--------- DEBUG  --------")
+	// testing us
+	// testing us END
 
 	for i, el := range videos {
-		money += (timeNow - timeBefore) * int64(videocarts[i]*el.Power/HOUR*moneyValue)
+		us.Score += int64((timeNow-us.Time)*(videocarts[i]*el.Power*val.Cost)) / 2
 	}
-
-	_, err = db.Exec(
-		update_user_score_and_time,
-		money,
-		time.Now().Unix(),
-		username,
-	)
-	return
+	us.Time = timeNow
+	db.Model(&us).Update(User{Time: us.Time, Score: us.Score})
+	return us.Score
 }
 
 func menu(msg *tgbotapi.Message) {
@@ -126,22 +87,13 @@ func menu(msg *tgbotapi.Message) {
 func video(msg *tgbotapi.Message) {
 	var videos [4]int
 
-	row := db.QueryRow(
-		get_all_video,
-		msg.From.UserName,
-	)
+	var us User
+	db.First(&us, "name = ?", msg.From.UserName)
 
-	err := row.Scan(
-		&videos[0],
-		&videos[1],
-		&videos[2],
-		&videos[3],
-	)
-
-	if err != nil {
-		log.Println(err)
-	}
-
+	videos[0] = us.Mayner1
+	videos[1] = us.Mayner2
+	videos[2] = us.Mayner3
+	videos[3] = us.Mayner4
 	fmt.Println(videos)
 
 	for i, el := range videos {
@@ -156,36 +108,19 @@ func video(msg *tgbotapi.Message) {
 
 func start(msg *tgbotapi.Message) {
 	var reply tgbotapi.MessageConfig
+	username := msg.From.UserName
 
-	if len(msg.From.UserName) > 4 {
-		var res sql.NullString
-		row := db.QueryRow(find_user, msg.From.UserName)
+	if len(username) > 4 {
+		var us User
+		db.Where("name = ?", username).First(&us)
 
-		err := row.Scan(&res)
-		if err != nil {
-			log.Println(err)
-		}
-		if res.Valid {
-			// this is temporary code here for ALPHA ONLY
-			_, err := db.Exec("UPDATE users SET user_id=? WHERE name=?",
-				msg.From.ID,
-				msg.From.UserName,
-			)
-			if err != nil {
-				log.Println(err)
-			}
-			// this is temporary code here
+		if us.ID != 0 {
 			reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты уже зарегистрирован")
 		} else {
-			_, err := db.Exec(
-				insert_new_user,
-				msg.From.UserName,
-				time.Now().Unix(),
-				msg.From.ID,
-			)
-			if err != nil {
-				log.Println(err)
-			}
+			us = us.NewDefaultUser()
+			us.Name = username
+			us.User_id = msg.Chat.ID
+			db.Create(&us)
 			reply = tgbotapi.NewMessage(msg.Chat.ID, "Ты регнулся! /help")
 		}
 
@@ -200,22 +135,18 @@ func start(msg *tgbotapi.Message) {
 }
 
 func sell(msg *tgbotapi.Message) {
-	row := db.QueryRow(get_new_money, msg.From.UserName)
-	var money, score int64
 	_ = renderScore(msg.From.UserName)
-	err := row.Scan(&money, &score)
-	if err != nil {
-		log.Println(err)
-	}
+	var us User
+	db.First(&us, "name = ?", msg.From.UserName)
 
-	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Сейчас у тебя %dР\nОбменять можно 500b -> 1Р, от 500b\nБаланс: %db", money, score))
+	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Сейчас у тебя %dР\nОбменять можно 500b -> 1Р, от 500b\nБаланс: %db", us.Money, us.Score))
 
 	reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("Продать!", "yes"),
 		),
 	)
-	_, err = bot.Send(reply)
+	_, err := bot.Send(reply)
 	if err != nil {
 		log.Println(err)
 	}
@@ -225,7 +156,6 @@ func sell(msg *tgbotapi.Message) {
 func score(msg *tgbotapi.Message) {
 	money := renderScore(msg.Chat.UserName)
 	reply := tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("Твой баланс %d Bitcoins!", money))
-
 	_, err := bot.Send(reply)
 	if err != nil {
 		log.Println(err)
@@ -264,30 +194,24 @@ func shop(msg *tgbotapi.Message) {
 }
 
 func value(msg *tgbotapi.Message) {
-	rows, err := db.Query(get_values)
-	if err != nil {
-		log.Println(err)
-	}
-	var name string
-	var cost int
-	var id int
-	for rows.Next() {
-		err := rows.Scan(&id, &name, &cost)
-		if err != nil {
-			log.Println(err)
-		}
-
+	var values []CryptoValue
+	db.Find(&values)
+	// testing values
+	fmt.Println("--------- DEBUG --------")
+	fmt.Println("-   ", values, "-")
+	fmt.Println("--------- DEBUG  --------")
+	for _, val := range values {
 		reply := tgbotapi.NewMessage(
 			msg.Chat.ID,
-			fmt.Sprintf("%s:\nМайнится в минуту: %d", name, cost),
+			fmt.Sprintf("%s:\nМайнится в минуту: %d", val.Name, val.Cost),
 		)
 		reply.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
-				tgbotapi.NewInlineKeyboardButtonData("Выбрать!", fmt.Sprintf("value %d", id)),
+				tgbotapi.NewInlineKeyboardButtonData("Выбрать!", fmt.Sprintf("value %d", val.ID)),
 			),
 		)
 
-		_, err = bot.Send(reply)
+		_, err := bot.Send(reply)
 		if err != nil {
 			log.Println(err)
 		}

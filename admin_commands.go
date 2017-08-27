@@ -1,9 +1,7 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/telegram-bot-api.v4"
 	"log"
 	"strconv"
@@ -21,19 +19,14 @@ func addMoney(cost string, name string, msg *tgbotapi.Message) {
 	if err != nil {
 		message = "Ошибка"
 	}
-	var user_money int
-	row := db.QueryRow(get_money, name)
-	err = row.Scan(&user_money)
-
-	if err != nil {
+	var us User
+	db.First(&us, "name = ?", name)
+	if us.ID != 0 {
+		us.Money += money
+	} else {
 		message = "Ошибка"
 	}
-
-	user_money += money
-	_, err = db.Exec(update_money, user_money, name)
-	if err != nil {
-		message = "Ошибка"
-	}
+	db.Model(&us).Update(User{Money: us.Money})
 	reply = tgbotapi.NewMessage(msg.Chat.ID, message)
 	_, err = bot.Send(reply)
 	if err != nil {
@@ -43,24 +36,14 @@ func addMoney(cost string, name string, msg *tgbotapi.Message) {
 }
 
 func sendMessageForAll(message string) {
-	rows, err := db.Query(select_users_id)
-	if err != nil {
-		log.Println(err)
-	}
+	var users []User
+	db.Find(&users)
 	var reply tgbotapi.MessageConfig
-	var id sql.NullInt64
-	for rows.Next() {
-		err = rows.Scan(&id)
+	for _, i := range users {
+		reply = tgbotapi.NewMessage(i.User_id, message)
+		_, err := bot.Send(reply)
 		if err != nil {
 			log.Println(err)
-		}
-		// this is test alpha code for users without ID, for old users
-		if id.Valid {
-			reply = tgbotapi.NewMessage(id.Int64, message)
-			_, err := bot.Send(reply)
-			if err != nil {
-				log.Println(err)
-			}
 		}
 	}
 }
