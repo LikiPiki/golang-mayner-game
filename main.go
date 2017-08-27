@@ -41,6 +41,7 @@ func init() {
 	videos = append(videos, VideoCard{"gtx 1080", "Мощная видеокарта", 1000, 7})
 	videos = append(videos, VideoCard{"gtx 1080ti", "Топовая видеокарта", 3000, 30})
 
+	go startAPI()
 }
 
 type VideoCard struct {
