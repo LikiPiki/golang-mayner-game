@@ -1,17 +1,19 @@
 <template>
 	<div>
 		<h1 class="h1">{{ indexTitle }}</h1>
-		<chart :chart-data="datacollection"></chart>
+		<div class="chart-wrap">
+			<chart-bar :chart-data="datacollection" :height="200"></chart-bar>
+		</div>
 	</div>
 </template>
 
 <script>
 
-import Chart from './Chart.vue'
+import ChartBar from './ChartBar.vue'
 
 export default {
 	components: {
-		'chart': Chart,
+		'chart-bar': ChartBar,
 	},
 	data(){
 		return{
@@ -20,10 +22,10 @@ export default {
 		}
 	},
 	created(){
-		this.fillData()
+		this.BarChartData()
 	},
 	methods: {
-		fillData () {
+		BarChartData () {
 			let labels = []
 			let chartData = []
 			this.$http.get('https://jsonplaceholder.typicode.com/users').then(function(data){
@@ -45,6 +47,8 @@ export default {
 }
 </script>
 
-<style>
-
+<style lang="sass">
+	// .chart-wrap
+	// 	max-width: 500px
+	// 	height: 400px
 </style>
